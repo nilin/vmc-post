@@ -14,7 +14,8 @@ import re
 def getruns(*path):
     return {root:getconfig(root)['notes'] for root,dirs,files in os.walk(os.path.join(*path)) if 'config.json' in files}
 
-#runs=dict(sorted(runs.items(),key=lambda a:a[1]))
+def sortruns(runs):
+    return dict(sorted(runs.items(),key=lambda a:a[1]))
 
 def getconfig(*path): 
     with open(os.path.join(*path,'config.json')) as f:
@@ -112,12 +113,12 @@ reference_energies=dict(
 reference_energies['N']=-54.5879
 reference_energies['O']=-75.065
 
-def plotruns(logdir,runs,ref,smoothing=1000):
+def plotruns(logdir,runs,ref,smoothing=1000,cleannote=lambda s:s):
     for r,note in runs.items():
         c=get_optimizer_color(note)
         energies=getenergies(logdir,r)-ref
         energies=gausskernel(energies,smoothing)
-        plt.plot(energies,label=note,color=c)
+        plt.plot(energies,label=cleannote(note),color=c)
 
 # save
 
@@ -127,3 +128,5 @@ def savefig(*path):
         os.makedirs(os.path.dirname(path),exist_ok=True)
     for suffix in ['.pdf']:
         plt.savefig(path+suffix,bbox_inches='tight')
+
+optimizernames=['adam','kfac','minsr','proxsr']
