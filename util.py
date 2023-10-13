@@ -11,33 +11,33 @@ import re
 
 # loading functions
 
+def getruns(*path):
+    return {root:getconfig(root)['notes'] for root,dirs,files in os.walk(os.path.join(*path)) if 'config.json' in files}
+
+#runs=dict(sorted(runs.items(),key=lambda a:a[1]))
+
 def getconfig(*path): 
-    try:
-        with open(os.path.join(*path,'config.json')) as f:
-            return json.load(f)
-    except:
-        return {"notes":""}
+    with open(os.path.join(*path,'config.json')) as f:
+        return json.load(f)
+    
+def getnotes(*path):
+    return getconfig(*path)['notes']
     
 def getenergies(*path):
-    with open(os.path.join(*path,'energy_noclip.txt'),'r') as f:
-        return np.array([float(l) for l in f])
+    return np.loadtxt(os.path.join(*path,'energy_noclip.txt'))
     
 def getevalenergies(*path):
-    with open(os.path.join(*path,'eval','energy.txt'),'r') as f:
-        return np.array([float(l) for l in f])
+    return np.loadtxt(os.path.join(*path,'eval','energy.txt'))
 
 def getevalenergy(*path):
-    with open(os.path.join(*path,'eval','energy.txt'),'r') as f:
-        return np.mean(np.array([float(l) for l in f])[-5000:])
-
-#def getevalenergy(*path):
-#    with open(os.path.join(*path,'eval','statistics.json'),'r') as f:
-#        return float(json.load(f)['average'])
+    return np.loadtxt(os.path.join(*path,'eval','energy.txt'))[-10000:].mean()
 
 def getvariances(*path):
-    with open(os.path.join(*path,'variance.txt'),'r') as f:
-        return np.array([float(l) for l in f])
+    return np.loadtxt(os.path.join(*path,'variance.txt'))
     
+def printnotes(runs):
+    for r,n in runs.items():
+        print(n)
 
 # defaults
 
@@ -57,20 +57,21 @@ def cleanlabel(name):
     name = name.replace('_',' ')
     return name
 
+def filter_notes(runs,regex):
+    return {r:n for r,n in runs.items() if re.search(regex,n) is not None}
 
+def filter_paths(runs,regex):
+    return {r:n for r,n in runs.items() if re.search(regex,r) is not None}
 
-
-"""requirements and exclusions for run names
-reqs=[('good',),('new','recent')]
-excl=['bad','outdated']
-"""
-def filter_runs(runs,reqs=None,excl=None):
-    if reqs is None: reqs=[]
-    if excl is None: excl=[]
-    runs={r:n for r,n in runs.items() if all([any([option in n for option in req]) for req in reqs])}
-    runs={r:n for r,n in runs.items() if all([not e in n for e in excl])}
-    runs=dict(sorted(runs.items(),key=lambda a:a[1]))
-    return runs
+def filter_configs(runs,property,regex):
+    def getproperty(D,l):
+        for key in l:
+            if key in D:
+                D=D[key]
+            else:
+                return None
+        return D
+    return {r:n for r,n in runs.items() if re.search(regex,getproperty(getconfig(r)[property])) is not None}
 
 # processing
 
@@ -108,7 +109,15 @@ reference_energies=dict(
     # at 2.6730 Angstrom = 5.0512379 Bohr, https://cccbdb.nist.gov/exp2x.asp?casno=14452596
     #
 )
+reference_energies['N']=-54.5879
+reference_energies['O']=-75.065
 
+def plotruns(logdir,runs,ref,smoothing=1000):
+    for r,note in runs.items():
+        c=get_optimizer_color(note)
+        energies=getenergies(logdir,r)-ref
+        energies=gausskernel(energies,smoothing)
+        plt.plot(energies,label=note,color=c)
 
 # save
 
