@@ -127,6 +127,8 @@ def savefig(*path):
     if not os.path.exists(os.path.dirname(path)):
         os.makedirs(os.path.dirname(path),exist_ok=True)
     for suffix in ['.pdf']:
-        plt.savefig(path+suffix,bbox_inches='tight')
+        outpath=path+suffix
+        plt.savefig(outpath,bbox_inches='tight')
+        print(outpath)
 
 optimizernames=['adam','kfac','minsr','proxsr']
